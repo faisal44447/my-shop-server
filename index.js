@@ -5,15 +5,12 @@ require('dotenv').config();
 
 const port = process.env.PORT || 5000;
 
-// middleware
-app.use(cors({
-    origin: ["http://localhost:5173"]
-}));
+app.use(cors());
 app.use(express.json());
 
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
-const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.dios5i3.mongodb.net/?appName=Cluster0`;
+const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.dios5i3.mongodb.net/shop?retryWrites=true&w=majority`;
 
 const client = new MongoClient(uri, {
     serverApi: {
@@ -27,22 +24,24 @@ async function run() {
     try {
         await client.connect();
 
-        const db = client.db("shop");
-        const collection = db.collection("accounts");
+        const collection = client.db("shop").collection("accounts");
 
-        // GET
         app.get("/accounts", async (req, res) => {
             const result = await collection.find().toArray();
             res.send(result);
         });
 
-        // POST
         app.post("/accounts", async (req, res) => {
-            const result = await collection.insertOne(req.body);
+            const data = req.body;
+
+            if (!data.date) {
+                data.date = new Date().toISOString();
+            }
+
+            const result = await collection.insertOne(data);
             res.send(result);
         });
 
-        // DELETE
         app.delete("/accounts/:id", async (req, res) => {
             const id = req.params.id;
             const result = await collection.deleteOne({
@@ -51,7 +50,6 @@ async function run() {
             res.send(result);
         });
 
-        // UPDATE
         app.patch("/accounts/:id", async (req, res) => {
             const id = req.params.id;
 
@@ -71,7 +69,6 @@ async function run() {
 
 run();
 
-// root route
 app.get("/", (req, res) => {
     res.send("Server is running");
 });
